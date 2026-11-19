@@ -1,0 +1,98 @@
+import { INGREDIENT_BY_ID } from '../data/ingredients';
+import type { Recipe, RecipeIngredient } from '../data/recipes';
+
+export type ScaledIngredient = RecipeIngredient & {
+  name: string;
+  quantity: number;
+  label: string;
+  selected: boolean;
+  missing: boolean;
+  availableLabel: string;
+};
+
+function formatNumber(quantity: number): string {
+  return String(quantity);
+}
+
+function pluralize(name: string): string {
+  const lowerName = name.toLowerCase();
+  const lastWord = lowerName.split(' ').pop() ?? lowerName;
+  if (lastWord.endsWith('s')) return lowerName;
+  const irregular: Record<string, string> = {
+    tomato: 'tomatoes',
+    potato: 'potatoes',
+    chilli: 'chillies',
+    leaf: 'leaves',
+  };
+  const pluralLastWord = irregular[lastWord] ??
+    (lastWord.endsWith('y') ? `${lastWord.slice(0, -1)}ies` : `${lastWord}s`);
+  return lowerName.slice(0, lowerName.length - lastWord.length) + pluralLastWord;
+}
+
+export function formatQuantity(
+  quantity: number,
+  unit: Recipe['ingredients'][number]['unit'],
+  name: string,
+): string {
+  const amount = roundRecipeQuantity(quantity, unit);
+
+  if (unit === 'piece') {
+    return `${formatNumber(amount)} ${amount === 1 ? name.toLowerCase() : pluralize(name)}`;
+  }
+  if (unit === 'clove') {
+    return `${formatNumber(amount)} ${amount === 1 ? 'clove' : 'cloves'} of ${name.toLowerCase()}`;
+  }
+  if (unit === 'leaf') {
+    return `${formatNumber(amount)} ${amount === 1 ? name.toLowerCase() : pluralize(name)}`;
+  }
+  if (unit === 'g') {
+    return `${formatNumber(amount)} g ${name.toLowerCase()}`;
+  }
+  return `${formatNumber(amount)} ${unit} ${name.toLowerCase()}`;
+}
+
+export function roundRecipeQuantity(
+  quantity: number,
+  unit: Recipe['ingredients'][number]['unit'],
+): number {
+  if (unit === 'piece' || unit === 'clove' || unit === 'leaf') {
+    return Math.max(1, Math.round(quantity));
+  }
+  if (unit === 'g') return Math.max(10, Math.round(quantity / 10) * 10);
+  return Math.max(0.5, Math.round(quantity * 2) / 2);
+}
+
+export function formatSteps(
+  recipe: Recipe,
+  people: number,
+  selectedIds: ReadonlySet<string>,
+): string[] {
+  const amounts = Object.fromEntries(
+    recipe.ingredients.map((ingredient) => {
+      const info = INGREDIENT_BY_ID[ingredient.id];
+      return [
+        ingredient.id,
+        formatQuantity(
+          ingredient.qtyPerServing * recipe.baseServings * (people / recipe.baseServings),
+          ingredient.unit,
+          info.name,
+        ),
+      ];
+    }),
+  );
+
+  return recipe.steps.map((step) =>
+    step.replace(/\{([a-z_]+)\}/g, (token, ingredientId: string) => {
+      if (!amounts[ingredientId]) {
+        return INGREDIENT_BY_ID[ingredientId]?.name ?? token;
+      }
+      if (!selectedIds.has(ingredientId)) {
+        const recipeIngredient = recipe.ingredients.find(({ id }) => id === ingredientId);
+        if (recipeIngredient && !recipeIngredient.required && !recipeIngredient.pantryStaple) {
+          return INGREDIENT_BY_ID[ingredientId]?.name.toLowerCase() ?? token;
+        }
+      }
+      return amounts[ingredientId];
+    }),
+  );
+}
