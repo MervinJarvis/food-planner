@@ -147,8 +147,22 @@ export function AuthProvider({ children }: PropsWithChildren) {
       ) {
         throw new Error(responseBody.error);
       }
+      if (error.context.status === 404) {
+        throw new Error(
+          'The username sign-in service is not deployed. Deploy the login-with-username Supabase function.',
+        );
+      }
+      if (error.context.status === 401) {
+        throw new Error(
+          'The username sign-in service rejected this request. Confirm its verify_jwt setting is disabled, then try again.',
+        );
+      }
     }
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(
+        `Could not reach username sign-in service: ${error.message}. Check that the function is deployed and restart Expo after editing .env.`,
+      );
+    }
     if (!data?.access_token || !data.refresh_token) {
       throw new Error('Sign-in did not return a valid session.');
     }
@@ -179,7 +193,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         password,
         options: { data: { username: normalizedUsername } },
       });
-      if (error) throw error;
+      if (error) {
+        if (/database error (saving|creating) new user/i.test(error.message)) {
+          throw new Error(
+            'Supabase could not create the user profile. Apply both database migrations and check the profile-creation trigger; also verify the username is unique.',
+          );
+        }
+        throw error;
+      }
 
       let pantryImportPending = false;
       let guestPantryImportPending = false;
