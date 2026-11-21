@@ -13,10 +13,10 @@ Use `npm start` to open the app on a device or simulator.
 
 ## Supabase accounts and pantry
 
-The app uses Supabase email/password authentication. Users sign in with their unique username or phone number and password; their email address is used by Supabase Auth to identify the account. Pantry rows are protected by database row-level security and can only be read or changed by their owner.
+The app uses Supabase email/password authentication. Usernames and a synchronized copy of the account email are stored in `public.profiles`. Supabase Auth stores the email and securely hashes the password in its protected `auth.users` system table; the app never stores plaintext passwords. Users sign in with their unique username or phone number and password. Pantry rows are protected by database row-level security and can only be read or changed by their owner.
 
 1. Create a Supabase project and enable the Email auth provider.
-2. Apply `supabase/migrations/20261119150000_auth_and_user_pantry.sql` in the Supabase SQL Editor (or link the project and run `supabase db push`).
+2. Apply both SQL migrations, in timestamp order, from `supabase/migrations/` in the Supabase SQL Editor (or link the project and run `supabase db push`).
 3. Copy `.env.example` to `.env` and set your project URL and publishable key from Supabase **Project Settings → API**.
 4. Install and sign in to the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started), link this repository to the project, and deploy the username-login function:
 
@@ -29,6 +29,8 @@ The app uses Supabase email/password authentication. Users sign in with their un
    The function uses Supabase's server-side `SUPABASE_SERVICE_ROLE_KEY`; never put that key in the app or `.env`.
 5. In Supabase Auth, require email confirmation, configure a working email delivery provider, and set the minimum password length to 8. Users must confirm their email before signing in.
 6. Restart Expo after setting `.env`.
+
+The `.env` file only connects the app to Supabase; it does not create database tables or deploy the login function. If sign-up fails while saving a new user, apply the migrations and check that the profile-creation trigger exists. If sign-in fails, deploy `login-with-username` and confirm its `verify_jwt = false` setting is applied.
 
 On sign-up, existing device pantry stock is imported into that account once. New pantry changes are saved in Supabase and remain isolated between accounts.
 
