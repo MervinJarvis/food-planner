@@ -43,6 +43,14 @@ function RecipeCard({
     <View style={styles.card}>
       <Text style={styles.kicker}>DISH {index + 1}</Text>
       <Text style={styles.dishName}>{recipe.name}</Text>
+      <View style={styles.dishNutrition}>
+        <Text style={styles.dishNutritionTitle}>DISH {index + 1} nutrition per person</Text>
+        <Text style={styles.dishNutritionValues}>
+          {formatMacro(recipe.nutritionPerServing.carbs)} carbs ·{' '}
+          {formatMacro(recipe.nutritionPerServing.protein)} protein ·{' '}
+          {formatMacro(recipe.nutritionPerServing.fat)} fat
+        </Text>
+      </View>
       {recipe.missing.length > 0 ? (
         <View style={styles.missingBox}>
           <Text style={styles.missingTitle}>Missing for this recipe</Text>
@@ -137,14 +145,6 @@ export default function ResultsScreen() {
     language,
   });
   const weakMatch = hasWeakMatch(dishes);
-  const nutritionPerPerson = dishes.reduce(
-    (total, dish) => ({
-      carbs: total.carbs + dish.nutritionPerServing.carbs,
-      protein: total.protein + dish.nutritionPerServing.protein,
-      fat: total.fat + dish.nutritionPerServing.fat,
-    }),
-    { carbs: 0, protein: 0, fat: 0 },
-  );
   const [pendingRecipe, setPendingRecipe] = useState<MatchedRecipe | null>(null);
   const [cookedRecipeIds, setCookedRecipeIds] = useState<string[]>([]);
   const [savingCook, setSavingCook] = useState(false);
@@ -196,27 +196,6 @@ export default function ResultsScreen() {
       ) : (
         <Text style={styles.intro}>Best matches from the recipes in our collection.</Text>
       )}
-
-      {dishes.length > 0 ? (
-        <View style={styles.nutritionBox}>
-          <Text style={styles.nutritionTitle}>Estimated nutrition per person</Text>
-          <View style={styles.nutritionGrid}>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{formatMacro(nutritionPerPerson.carbs)}</Text>
-              <Text style={styles.nutritionLabel}>Carbohydrates</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{formatMacro(nutritionPerPerson.protein)}</Text>
-              <Text style={styles.nutritionLabel}>Protein</Text>
-            </View>
-            <View style={styles.nutritionItem}>
-              <Text style={styles.nutritionValue}>{formatMacro(nutritionPerPerson.fat)}</Text>
-              <Text style={styles.nutritionLabel}>Fat</Text>
-            </View>
-          </View>
-          <Text style={styles.nutritionNote}>Approximate totals for this meal plan.</Text>
-        </View>
-      ) : null}
 
       {pantryLoading ? (
         <Text style={styles.empty}>Loading pantry stock…</Text>
@@ -336,43 +315,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textTransform: 'capitalize',
   },
-  nutritionBox: {
-    marginBottom: 16,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: '#C9DCCF',
-    borderRadius: 14,
-    backgroundColor: '#EEF5F0',
-  },
-  nutritionTitle: {
-    color: '#2D6A4F',
-    fontSize: 16,
-    fontWeight: '800',
-  },
-  nutritionGrid: {
-    flexDirection: 'row',
-    marginTop: 12,
-  },
-  nutritionItem: {
-    flex: 1,
-    alignItems: 'center',
-  },
-  nutritionValue: {
-    color: '#7A2E0E',
-    fontSize: 20,
-    fontWeight: '800',
-  },
-  nutritionLabel: {
-    marginTop: 2,
-    color: '#5C4A3A',
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  nutritionNote: {
-    marginTop: 10,
-    color: '#6E756F',
-    fontSize: 12,
-  },
   intro: {
     marginTop: 12,
     marginBottom: 16,
@@ -439,6 +381,23 @@ const styles = StyleSheet.create({
     color: '#7A2E0E',
     fontSize: 23,
     fontWeight: '800',
+  },
+  dishNutrition: {
+    marginTop: 10,
+    padding: 10,
+    borderRadius: 8,
+    backgroundColor: '#EEF5F0',
+  },
+  dishNutritionTitle: {
+    color: '#2D6A4F',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  dishNutritionValues: {
+    marginTop: 3,
+    color: '#3D2B1F',
+    fontSize: 14,
+    lineHeight: 20,
   },
   missingBox: {
     marginTop: 10,
