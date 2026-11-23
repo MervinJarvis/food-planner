@@ -1,5 +1,6 @@
-import { INGREDIENT_BY_ID } from '../data/ingredients';
-import { RECIPES, type MealType, type Recipe } from '../data/recipes';
+import { getIngredientName as getLocalizedIngredientName } from '../data/ingredientTranslations';
+import type { AppLanguage } from '../data/ingredientTranslations';
+import { RECIPES, type MealType, type Recipe, type RecipeNutrition } from '../data/recipes';
 import { formatQuantity, formatSteps, type ScaledIngredient } from './formatSteps';
 import {
   convertQuantity,
@@ -13,6 +14,7 @@ export type MatchedRecipe = {
   id: string;
   name: string;
   kind: Recipe['kind'];
+  nutritionPerServing: RecipeNutrition;
   score: number;
   matchedRequired: number;
   requiredCount: number;
@@ -73,12 +75,13 @@ function buildResult(
   people: number,
   selectedIds: ReadonlySet<string>,
   pantry: PantryStock[],
+  language: AppLanguage,
 ): MatchedRecipe {
   const pantryById = new Map(pantry.map((item) => [item.ingredientId, item]));
   const usage = getRecipeUsage(recipe.ingredients, people);
   const result = scoreRecipe(recipe, selectedIds, pantryById, usage);
   const ingredients = recipe.ingredients.map((ingredient): ScaledIngredient => {
-    const info = INGREDIENT_BY_ID[ingredient.id];
+    const name = getLocalizedIngredientName(ingredient.id, language);
     const usedIngredient = usage.find((item) => item.id === ingredient.id);
     const quantity = usedIngredient?.quantity ?? ingredient.qtyPerServing * people;
     const stock = pantryById.get(ingredient.id);
@@ -90,9 +93,9 @@ function buildResult(
       availableQuantity + 1e-8 >= quantity;
     return {
       ...ingredient,
-      name: info.name,
+      name,
       quantity,
-      label: formatQuantity(quantity, ingredient.unit, info.name),
+      label: formatQuantity(quantity, ingredient.unit, name, language),
       selected: enoughStock,
       missing: ingredient.required && !ingredient.pantryStaple && !enoughStock,
       availableLabel: !selectedIds.has(ingredient.id)
@@ -107,10 +110,11 @@ function buildResult(
     id: recipe.id,
     name: recipe.name,
     kind: recipe.kind,
+    nutritionPerServing: recipe.nutritionPerServing,
     ...result,
     ingredients,
     usage,
-    steps: formatSteps(recipe, people, selectedIds),
+    steps: formatSteps(recipe, people, selectedIds, language),
     accompaniments: recipe.accompaniments,
   };
 }
@@ -121,12 +125,14 @@ export function findDishes({
   people,
   pantry,
   recipeIds,
+  language = 'en',
 }: {
   meals: MealType[];
   ingredientIds: string[];
   people: number;
   pantry: PantryStock[];
   recipeIds?: string[];
+  language?: AppLanguage;
 }): MatchedRecipe[] {
   const selectedIds = new Set(ingredientIds);
   const mealSet = new Set(meals);
@@ -134,7 +140,7 @@ export function findDishes({
     .filter((recipe) =>
       recipe.mealTypes.some((meal) => mealSet.has(meal)) &&
       (!recipeIds || recipeIds.includes(recipe.id)))
-    .map((recipe) => buildResult(recipe, people, selectedIds, pantry))
+    .map((recipe) => buildResult(recipe, people, selectedIds, pantry, language))
     .sort((a, b) => b.score - a.score || b.matchRatio - a.matchRatio);
 
   if (ranked.length === 0) return [];
@@ -160,6 +166,6 @@ export function isMealType(value: string): value is MealType {
   return value === 'breakfast' || value === 'lunch' || value === 'dinner';
 }
 
-export function getIngredientName(id: string): string {
-  return INGREDIENT_BY_ID[id]?.name ?? id;
+export function getIngredientName(id: string, language: AppLanguage = 'en'): string {
+  return getLocalizedIngredientName(id, language);
 }

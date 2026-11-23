@@ -2,6 +2,7 @@ import { Stack } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { PantryProvider } from '../context/PantryContext';
+import { LanguageProvider } from '../context/LanguageContext';
 
 function RootNavigator() {
   const { session, guest, loading } = useAuth();
@@ -30,11 +31,13 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <PantryProvider>
-        <RootNavigator />
-      </PantryProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <PantryProvider>
+          <RootNavigator />
+        </PantryProvider>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 

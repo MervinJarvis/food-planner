@@ -44,6 +44,10 @@ Recipes in `src/data/recipes.ts` specify meals, required and optional ingredient
 
 The recipe catalog is intentionally local and finite. Missing required ingredients are shown on the result cards rather than preventing the closest recipes from appearing.
 
+## Ingredient languages
+
+Choose English, Tamil, Kannada, or Hindi from the ingredient-language selector on the Plan, Pantry, or results screen. The choice is saved on the device. Ingredient and category names are shown in the selected language when a translation is available, and ingredient search also matches English names. Recipe instructions and the rest of the app interface remain in English.
+
 ## Pantry
 
 The Pantry tab stores each signed-in user's ingredient quantities in Supabase. Ingredients use a consistent default unit (for example, produce in kilograms, spices in ounces, eggs as pieces, and meat in grams); recipe units are converted when checking stock and deducting amounts. Stock is never consumed while browsing or planning. On a recipe card, choose **Cooked this** and confirm the preview to deduct quantities. A recipe cannot be marked cooked when required ingredients are missing or understocked.

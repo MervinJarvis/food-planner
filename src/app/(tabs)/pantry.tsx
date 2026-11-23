@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { INGREDIENTS } from '../../data/ingredients';
+import { getIngredientName, getIngredientSearchNames } from '../../data/ingredientTranslations';
 import type { Ingredient } from '../../data/ingredients';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { usePantry } from '../../context/PantryContext';
 import { formatPantryQuantity, getPantryUnit } from '../../lib/pantry';
+import { LanguagePicker } from '../../components/LanguagePicker';
 
 function QuantityButton({
   label,
@@ -32,6 +35,7 @@ function QuantityButton({
 }
 
 export default function PantryScreen() {
+  const { language } = useLanguage();
   const {
     guest,
     signOut,
@@ -66,9 +70,11 @@ export default function PantryScreen() {
   const matches = useMemo(() => {
     const query = search.trim().toLocaleLowerCase();
     return INGREDIENTS.filter((ingredient) =>
-      ingredient.name.toLocaleLowerCase().includes(query),
+      getIngredientSearchNames(ingredient.id, language).some((name) =>
+        name.toLocaleLowerCase().includes(query),
+      ),
     ).slice(0, 8);
-  }, [search]);
+  }, [language, search]);
 
   const addIngredient = async () => {
     if (!selectedIngredient) {
@@ -137,6 +143,7 @@ export default function PantryScreen() {
           <Text style={styles.guestNotice}>Guest mode · saved only on this device</Text>
         ) : null}
       </View>
+      <LanguagePicker />
 
       {error ? (
         <View style={styles.errorBox}>
@@ -168,11 +175,11 @@ export default function PantryScreen() {
               accessibilityRole="button"
               onPress={() => {
                 setSelectedIngredient(ingredient);
-                setSearch(ingredient.name);
+              setSearch(getIngredientName(ingredient.id, language));
               }}
               style={styles.suggestion}
             >
-              <Text style={styles.suggestionText}>{ingredient.name}</Text>
+              <Text style={styles.suggestionText}>{getIngredientName(ingredient.id, language)}</Text>
               <Text style={styles.suggestionUnit}>{getPantryUnit(ingredient.id)}</Text>
             </Pressable>
           )) : (
@@ -231,7 +238,7 @@ export default function PantryScreen() {
         return (
           <View key={item.ingredientId} style={styles.stockCard}>
             <View style={styles.stockInfo}>
-              <Text style={styles.stockName}>{ingredient.name}</Text>
+              <Text style={styles.stockName}>{getIngredientName(ingredient.id, language)}</Text>
               <Text style={styles.stockAmount}>
                 {formatPantryQuantity(item.quantity, item.unit, item.ingredientId)}
               </Text>
@@ -239,18 +246,18 @@ export default function PantryScreen() {
             <View style={styles.stockActions}>
               <QuantityButton
                 label="−"
-                accessibilityLabel={`Remove ${step} ${item.unit} of ${ingredient.name}`}
+                accessibilityLabel={`Remove ${step} ${item.unit} of ${getIngredientName(ingredient.id, language)}`}
                 disabled={item.quantity < step}
                 onPress={() => adjustStock(item.ingredientId, Math.max(0, item.quantity - step))}
               />
               <QuantityButton
                 label="+"
-                accessibilityLabel={`Add ${step} ${item.unit} of ${ingredient.name}`}
+                accessibilityLabel={`Add ${step} ${item.unit} of ${getIngredientName(ingredient.id, language)}`}
                 onPress={() => adjustStock(item.ingredientId, item.quantity + step)}
               />
               <Pressable
                 accessibilityRole="button"
-                accessibilityLabel={`Remove ${ingredient.name} from pantry`}
+                accessibilityLabel={`Remove ${getIngredientName(ingredient.id, language)} from pantry`}
                 onPress={() => deleteStock(item.ingredientId)}
                 style={styles.removeButton}
               >

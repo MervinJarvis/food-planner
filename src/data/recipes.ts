@@ -9,6 +9,12 @@ export type RecipeIngredient = {
   pantryStaple?: boolean;
 };
 
+export type RecipeNutrition = {
+  carbs: number;
+  protein: number;
+  fat: number;
+};
+
 export type Recipe = {
   id: string;
   name: string;
@@ -16,6 +22,7 @@ export type Recipe = {
   mealTypes: MealType[];
   baseServings: number;
   ingredients: RecipeIngredient[];
+  nutritionPerServing: RecipeNutrition;
   steps: string[];
   accompaniments: string[];
 };
@@ -29,6 +36,7 @@ export const RECIPES: Recipe[] = [
     kind: 'chutney',
     mealTypes: ['breakfast', 'lunch'],
     baseServings,
+    nutritionPerServing: { carbs: 12, protein: 2, fat: 7 },
     ingredients: [
       { id: 'tomato', qtyPerServing: 1, unit: 'piece', required: true },
       { id: 'onion', qtyPerServing: 0.5, unit: 'piece', required: true },
@@ -51,6 +59,7 @@ export const RECIPES: Recipe[] = [
     kind: 'chutney',
     mealTypes: ['breakfast'],
     baseServings,
+    nutritionPerServing: { carbs: 8, protein: 2, fat: 12 },
     ingredients: [
       { id: 'coconut', qtyPerServing: 0.25, unit: 'cup', required: true },
       { id: 'salt', qtyPerServing: 0.25, unit: 'tsp', required: true },
@@ -74,6 +83,7 @@ export const RECIPES: Recipe[] = [
     kind: 'chutney',
     mealTypes: ['breakfast', 'lunch'],
     baseServings,
+    nutritionPerServing: { carbs: 14, protein: 2, fat: 8 },
     ingredients: [
       { id: 'onion', qtyPerServing: 1, unit: 'piece', required: true },
       { id: 'chilli_powder', qtyPerServing: 0.5, unit: 'tsp', required: true },
@@ -95,6 +105,7 @@ export const RECIPES: Recipe[] = [
     kind: 'side',
     mealTypes: ['breakfast', 'lunch'],
     baseServings,
+    nutritionPerServing: { carbs: 25, protein: 3, fat: 7 },
     ingredients: [
       { id: 'potato', qtyPerServing: 1, unit: 'piece', required: true },
       { id: 'onion', qtyPerServing: 0.5, unit: 'piece', required: true },
@@ -118,6 +129,7 @@ export const RECIPES: Recipe[] = [
     kind: 'main',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
+    nutritionPerServing: { carbs: 18, protein: 3, fat: 7 },
     ingredients: [
       { id: 'carrot', qtyPerServing: 0.5, unit: 'piece', required: true },
       { id: 'beans', qtyPerServing: 3, unit: 'piece', required: true },
@@ -144,6 +156,7 @@ export const RECIPES: Recipe[] = [
     kind: 'side',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
+    nutritionPerServing: { carbs: 10, protein: 3, fat: 6 },
     ingredients: [
       { id: 'spinach', qtyPerServing: 1, unit: 'cup', required: true },
       { id: 'onion', qtyPerServing: 0.5, unit: 'piece', required: false },
@@ -167,6 +180,7 @@ export const RECIPES: Recipe[] = [
     kind: 'main',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
+    nutritionPerServing: { carbs: 10, protein: 32, fat: 18 },
     ingredients: [
       { id: 'chicken', qtyPerServing: 150, unit: 'g', required: true },
       { id: 'onion', qtyPerServing: 0.5, unit: 'piece', required: true },
@@ -194,6 +208,7 @@ export const RECIPES: Recipe[] = [
     kind: 'main',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
+    nutritionPerServing: { carbs: 10, protein: 35, fat: 22 },
     ingredients: [
       { id: 'mutton', qtyPerServing: 175, unit: 'g', required: true },
       { id: 'onion', qtyPerServing: 0.5, unit: 'piece', required: true },
@@ -222,6 +237,7 @@ export const RECIPES: Recipe[] = [
     kind: 'main',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
+    nutritionPerServing: { carbs: 9, protein: 30, fat: 16 },
     ingredients: [
       { id: 'fish', qtyPerServing: 150, unit: 'g', required: true },
       { id: 'onion', qtyPerServing: 0.5, unit: 'piece', required: true },
@@ -246,6 +262,7 @@ export const RECIPES: Recipe[] = [
     kind: 'main',
     mealTypes: ['breakfast', 'lunch', 'dinner'],
     baseServings,
+    nutritionPerServing: { carbs: 8, protein: 12, fat: 10 },
     ingredients: [
       { id: 'egg', qtyPerServing: 1, unit: 'piece', required: true },
       { id: 'onion', qtyPerServing: 0.5, unit: 'piece', required: true },
@@ -267,6 +284,7 @@ export const RECIPES: Recipe[] = [
     kind: 'main',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
+    nutritionPerServing: { carbs: 16, protein: 4, fat: 8 },
     ingredients: [
       { id: 'brinjal', qtyPerServing: 1, unit: 'piece', required: true },
       { id: 'onion', qtyPerServing: 0.5, unit: 'piece', required: true },

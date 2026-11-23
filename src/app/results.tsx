@@ -2,9 +2,13 @@ import { useState } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { INGREDIENT_BY_ID } from '../data/ingredients';
+import { getIngredientName } from '../data/ingredientTranslations';
+import type { AppLanguage } from '../data/ingredientTranslations';
 import { hasWeakMatch, isMealType, findDishes, type MatchedRecipe } from '../lib/matchRecipes';
+import { useLanguage } from '../context/LanguageContext';
 import { usePantry } from '../context/PantryContext';
 import { formatPantryQuantity, getRecipeDeductionPreview } from '../lib/pantry';
+import { LanguagePicker } from '../components/LanguagePicker';
 
 function parseList(value: string | string[] | undefined): string[] {
   const text = Array.isArray(value) ? value[0] : value;
@@ -18,16 +22,22 @@ function formatAccompaniments(items: string[]): string {
   return `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}`;
 }
 
+function formatMacro(value: number): string {
+  return `${Math.round(value)} g`;
+}
+
 function RecipeCard({
   recipe,
   index,
   cooked,
   onCook,
+  language,
 }: {
   recipe: MatchedRecipe;
   index: number;
   cooked: boolean;
   onCook: () => void;
+  language: AppLanguage;
 }) {
   return (
     <View style={styles.card}>
@@ -37,7 +47,7 @@ function RecipeCard({
         <View style={styles.missingBox}>
           <Text style={styles.missingTitle}>Missing for this recipe</Text>
           <Text style={styles.missingText}>
-            {recipe.missing.map((id) => INGREDIENT_BY_ID[id]?.name ?? id).join(', ')}
+            {recipe.missing.map((id) => getIngredientName(id, language)).join(', ')}
           </Text>
         </View>
       ) : null}
@@ -98,6 +108,7 @@ function RecipeCard({
 }
 
 export default function ResultsScreen() {
+  const { language } = useLanguage();
   const {
     pantry,
     loading: pantryLoading,
@@ -115,10 +126,25 @@ export default function ResultsScreen() {
   const parsedPeople = Number(Array.isArray(params.people) ? params.people[0] : params.people);
   const people = Number.isInteger(parsedPeople) ? Math.min(12, Math.max(1, parsedPeople)) : 3;
 
-  const initialDishes = findDishes({ meals, ingredientIds, people, pantry });
+  const initialDishes = findDishes({ meals, ingredientIds, people, pantry, language });
   const [plannedRecipeIds] = useState(() => initialDishes.map((dish) => dish.id));
-  const dishes = findDishes({ meals, ingredientIds, people, pantry, recipeIds: plannedRecipeIds });
+  const dishes = findDishes({
+    meals,
+    ingredientIds,
+    people,
+    pantry,
+    recipeIds: plannedRecipeIds,
+    language,
+  });
   const weakMatch = hasWeakMatch(dishes);
+  const nutritionPerPerson = dishes.reduce(
+    (total, dish) => ({
+      carbs: total.carbs + dish.nutritionPerServing.carbs,
+      protein: total.protein + dish.nutritionPerServing.protein,
+      fat: total.fat + dish.nutritionPerServing.fat,
+    }),
+    { carbs: 0, protein: 0, fat: 0 },
+  );
   const [pendingRecipe, setPendingRecipe] = useState<MatchedRecipe | null>(null);
   const [cookedRecipeIds, setCookedRecipeIds] = useState<string[]>([]);
   const [savingCook, setSavingCook] = useState(false);
@@ -153,6 +179,7 @@ export default function ResultsScreen() {
       >
         <Text style={styles.backText}>←  Edit your ingredients</Text>
       </Pressable>
+      <LanguagePicker />
 
       <Text style={styles.title}>Your meal plan</Text>
       <Text style={styles.subtitle}>
@@ -169,6 +196,27 @@ export default function ResultsScreen() {
       ) : (
         <Text style={styles.intro}>Best matches from the recipes in our collection.</Text>
       )}
+
+      {dishes.length > 0 ? (
+        <View style={styles.nutritionBox}>
+          <Text style={styles.nutritionTitle}>Estimated nutrition per person</Text>
+          <View style={styles.nutritionGrid}>
+            <View style={styles.nutritionItem}>
+              <Text style={styles.nutritionValue}>{formatMacro(nutritionPerPerson.carbs)}</Text>
+              <Text style={styles.nutritionLabel}>Carbohydrates</Text>
+            </View>
+            <View style={styles.nutritionItem}>
+              <Text style={styles.nutritionValue}>{formatMacro(nutritionPerPerson.protein)}</Text>
+              <Text style={styles.nutritionLabel}>Protein</Text>
+            </View>
+            <View style={styles.nutritionItem}>
+              <Text style={styles.nutritionValue}>{formatMacro(nutritionPerPerson.fat)}</Text>
+              <Text style={styles.nutritionLabel}>Fat</Text>
+            </View>
+          </View>
+          <Text style={styles.nutritionNote}>Approximate totals for this meal plan.</Text>
+        </View>
+      ) : null}
 
       {pantryLoading ? (
         <Text style={styles.empty}>Loading pantry stock…</Text>
@@ -193,6 +241,7 @@ export default function ResultsScreen() {
           index={index}
           cooked={cookedRecipeIds.includes(dish.id)}
           onCook={() => setPendingRecipe(dish)}
+          language={language}
         />
       )) : null}
 
@@ -220,7 +269,7 @@ export default function ResultsScreen() {
           </Text>
           <ScrollView style={styles.modalList}>
             {pendingRecipe ? getRecipeDeductionPreview(pendingRecipe.usage, pantry).map((item) => {
-              const ingredientName = INGREDIENT_BY_ID[item.ingredientId]?.name ?? item.ingredientId;
+              const ingredientName = getIngredientName(item.ingredientId, language);
               return (
                 <Text key={item.ingredientId} style={styles.modalLine}>
                   {ingredientName}: use {formatPantryQuantity(item.quantity, item.unit, item.ingredientId)} ·{' '}
@@ -286,6 +335,43 @@ const styles = StyleSheet.create({
     color: '#5C4A3A',
     fontSize: 15,
     textTransform: 'capitalize',
+  },
+  nutritionBox: {
+    marginBottom: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#C9DCCF',
+    borderRadius: 14,
+    backgroundColor: '#EEF5F0',
+  },
+  nutritionTitle: {
+    color: '#2D6A4F',
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  nutritionGrid: {
+    flexDirection: 'row',
+    marginTop: 12,
+  },
+  nutritionItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  nutritionValue: {
+    color: '#7A2E0E',
+    fontSize: 20,
+    fontWeight: '800',
+  },
+  nutritionLabel: {
+    marginTop: 2,
+    color: '#5C4A3A',
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  nutritionNote: {
+    marginTop: 10,
+    color: '#6E756F',
+    fontSize: 12,
   },
   intro: {
     marginTop: 12,

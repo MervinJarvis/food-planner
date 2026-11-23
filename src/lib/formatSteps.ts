@@ -1,4 +1,6 @@
 import { INGREDIENT_BY_ID } from '../data/ingredients';
+import { getIngredientName } from '../data/ingredientTranslations';
+import type { AppLanguage } from '../data/ingredientTranslations';
 import type { Recipe, RecipeIngredient } from '../data/recipes';
 
 export type ScaledIngredient = RecipeIngredient & {
@@ -33,17 +35,20 @@ export function formatQuantity(
   quantity: number,
   unit: Recipe['ingredients'][number]['unit'],
   name: string,
+  language: AppLanguage = 'en',
 ): string {
   const amount = roundRecipeQuantity(quantity, unit);
 
   if (unit === 'piece') {
-    return `${formatNumber(amount)} ${amount === 1 ? name.toLowerCase() : pluralize(name)}`;
+    const pieceName = language === 'en' && amount !== 1 ? pluralize(name) : name.toLowerCase();
+    return `${formatNumber(amount)} ${pieceName}`;
   }
   if (unit === 'clove') {
     return `${formatNumber(amount)} ${amount === 1 ? 'clove' : 'cloves'} of ${name.toLowerCase()}`;
   }
   if (unit === 'leaf') {
-    return `${formatNumber(amount)} ${amount === 1 ? name.toLowerCase() : pluralize(name)}`;
+    const leafName = language === 'en' && amount !== 1 ? pluralize(name) : name.toLowerCase();
+    return `${formatNumber(amount)} ${leafName}`;
   }
   if (unit === 'g') {
     return `${formatNumber(amount)} g ${name.toLowerCase()}`;
@@ -66,16 +71,18 @@ export function formatSteps(
   recipe: Recipe,
   people: number,
   selectedIds: ReadonlySet<string>,
+  language: AppLanguage = 'en',
 ): string[] {
   const amounts = Object.fromEntries(
     recipe.ingredients.map((ingredient) => {
-      const info = INGREDIENT_BY_ID[ingredient.id];
+      const name = getIngredientName(ingredient.id, language);
       return [
         ingredient.id,
         formatQuantity(
           ingredient.qtyPerServing * recipe.baseServings * (people / recipe.baseServings),
           ingredient.unit,
-          info.name,
+          name,
+          language,
         ),
       ];
     }),
@@ -84,12 +91,14 @@ export function formatSteps(
   return recipe.steps.map((step) =>
     step.replace(/\{([a-z_]+)\}/g, (token, ingredientId: string) => {
       if (!amounts[ingredientId]) {
-        return INGREDIENT_BY_ID[ingredientId]?.name ?? token;
+        return INGREDIENT_BY_ID[ingredientId]
+          ? getIngredientName(ingredientId, language)
+          : token;
       }
       if (!selectedIds.has(ingredientId)) {
         const recipeIngredient = recipe.ingredients.find(({ id }) => id === ingredientId);
         if (recipeIngredient && !recipeIngredient.required && !recipeIngredient.pantryStaple) {
-          return INGREDIENT_BY_ID[ingredientId]?.name.toLowerCase() ?? token;
+          return getIngredientName(ingredientId, language).toLowerCase();
         }
       }
       return amounts[ingredientId];

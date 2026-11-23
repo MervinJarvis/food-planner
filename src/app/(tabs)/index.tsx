@@ -2,11 +2,18 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { CATEGORIES, INGREDIENTS } from '../../data/ingredients';
+import {
+  getCategoryName,
+  getIngredientName,
+  getIngredientSearchNames,
+} from '../../data/ingredientTranslations';
 import type { Ingredient, IngredientCategory } from '../../data/ingredients';
 import type { MealType } from '../../data/recipes';
 import { useAuth } from '../../context/AuthContext';
+import { useLanguage } from '../../context/LanguageContext';
 import { usePantry } from '../../context/PantryContext';
 import { formatPantryQuantity, getPantryUnit } from '../../lib/pantry';
+import { LanguagePicker } from '../../components/LanguagePicker';
 
 const MEALS: { id: MealType; label: string }[] = [
   { id: 'breakfast', label: 'Breakfast' },
@@ -37,6 +44,7 @@ function Chip({
 
 export default function PlanScreen() {
   const { guest, signOut, prepareGuestAccountSignup } = useAuth();
+  const { language } = useLanguage();
   const {
     pantry,
     loading: pantryLoading,
@@ -90,12 +98,14 @@ export default function PlanScreen() {
     const query = ingredientSearch.trim().toLocaleLowerCase();
     for (const ingredient of INGREDIENTS) {
       if ((pantryById.has(ingredient.id) || query.length > 0) &&
-          (!query || ingredient.name.toLocaleLowerCase().includes(query))) {
+          (!query || getIngredientSearchNames(ingredient.id, language).some((name) =>
+            name.toLocaleLowerCase().includes(query),
+          ))) {
         groups[ingredient.category].push(ingredient);
       }
     }
     return groups;
-  }, [ingredientSearch, pantryById]);
+  }, [ingredientSearch, language, pantryById]);
 
   const toggleMeal = (id: MealType) => {
     setMeals((current) =>
@@ -173,6 +183,7 @@ export default function PlanScreen() {
         </Text>
         {accountError ? <Text style={styles.errorText}>{accountError}</Text> : null}
       </View>
+      <LanguagePicker />
 
       <Text style={styles.section}>1. Choose a meal</Text>
       <View style={styles.row}>
@@ -242,10 +253,12 @@ export default function PlanScreen() {
       {ingredientToAdd ? (
         <View style={styles.stockAddCard}>
           <View style={styles.stockAddHeading}>
-            <Text style={styles.stockAddTitle}>Add {ingredientToAdd.name}</Text>
+            <Text style={styles.stockAddTitle}>
+              Add {getIngredientName(ingredientToAdd.id, language)}
+            </Text>
             <Pressable
               accessibilityRole="button"
-              accessibilityLabel={`Cancel adding ${ingredientToAdd.name}`}
+              accessibilityLabel={`Cancel adding ${getIngredientName(ingredientToAdd.id, language)}`}
               onPress={() => {
                 setIngredientToAdd(null);
                 setStockError(null);
@@ -260,7 +273,7 @@ export default function PlanScreen() {
           </Text>
           <View style={styles.stockAddRow}>
             <TextInput
-              accessibilityLabel={`Amount of ${ingredientToAdd.name} in ${getPantryUnit(ingredientToAdd.id)}`}
+              accessibilityLabel={`Amount of ${getIngredientName(ingredientToAdd.id, language)} in ${getPantryUnit(ingredientToAdd.id)}`}
               keyboardType="decimal-pad"
               editable={!savingStock}
               value={stockAmount}
@@ -287,7 +300,7 @@ export default function PlanScreen() {
       {CATEGORIES.map((category) => (
         byCategory[category.id].length > 0 ? (
           <View key={category.id} style={styles.categoryBlock}>
-            <Text style={styles.category}>{category.label}</Text>
+            <Text style={styles.category}>{getCategoryName(category.id, language)}</Text>
             <View style={styles.row}>
               {byCategory[category.id].map((ingredient) => {
                 const stock = pantryById.get(ingredient.id);
@@ -295,12 +308,12 @@ export default function PlanScreen() {
                   <Chip
                     key={ingredient.id}
                     label={stock
-                      ? `${ingredient.name} · ${formatPantryQuantity(
+                      ? `${getIngredientName(ingredient.id, language)} · ${formatPantryQuantity(
                         stock.quantity,
                         stock.unit,
                         ingredient.id,
                       )}`
-                      : `${ingredient.name} · add to pantry`}
+                      : `${getIngredientName(ingredient.id, language)} · add to pantry`}
                     selected={Boolean(stock) && (
                       selectedIngredients === null ||
                       selectedIngredients.includes(ingredient.id)
