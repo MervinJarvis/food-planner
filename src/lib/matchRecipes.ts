@@ -1,6 +1,7 @@
 import { getIngredientName as getLocalizedIngredientName } from '../data/ingredientTranslations';
 import type { AppLanguage } from '../data/ingredientTranslations';
 import { RECIPES, type MealType, type Recipe, type RecipeNutrition } from '../data/recipes';
+import { getAllergyIngredientIds } from './allergies';
 import { formatQuantity, formatSteps, type ScaledIngredient } from './formatSteps';
 import {
   convertQuantity,
@@ -140,6 +141,7 @@ export function findDishes({
   people,
   pantry,
   recipeIds,
+  allergies = [],
   language = 'en',
 }: {
   meals: MealType[];
@@ -147,14 +149,17 @@ export function findDishes({
   people: number;
   pantry: PantryStock[];
   recipeIds?: string[];
+  allergies?: string[];
   language?: AppLanguage;
 }): MatchedRecipe[] {
   const selectedIds = new Set(ingredientIds);
+  const allergenIds = getAllergyIngredientIds(allergies);
   const mealSet = new Set(meals);
   const ranked = RECIPES
     .filter((recipe) =>
       (recipe.mealTypes.some((meal) => mealSet.has(meal)) ||
         hasSelectedProtein(recipe, selectedIds)) &&
+      !recipe.ingredients.some((ingredient) => allergenIds.has(ingredient.id)) &&
       (!recipeIds || recipeIds.includes(recipe.id)))
     .map((recipe) => buildResult(recipe, people, selectedIds, pantry, language))
     .sort((a, b) => {

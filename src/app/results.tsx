@@ -7,8 +7,10 @@ import type { AppLanguage } from '../data/ingredientTranslations';
 import { hasWeakMatch, isMealType, findDishes, type MatchedRecipe } from '../lib/matchRecipes';
 import { useLanguage } from '../context/LanguageContext';
 import { usePantry } from '../context/PantryContext';
+import { useProfile } from '../context/ProfileContext';
 import { formatPantryQuantity, getRecipeDeductionPreview } from '../lib/pantry';
 import { LanguagePicker } from '../components/LanguagePicker';
+import { getAllergyIngredientIds } from '../lib/allergies';
 
 function parseList(value: string | string[] | undefined): string[] {
   const text = Array.isArray(value) ? value[0] : value;
@@ -126,6 +128,7 @@ function RecipeCard({
 
 export default function ResultsScreen() {
   const { language } = useLanguage();
+  const { preferences } = useProfile();
   const {
     pantry,
     loading: pantryLoading,
@@ -143,7 +146,14 @@ export default function ResultsScreen() {
   const parsedPeople = Number(Array.isArray(params.people) ? params.people[0] : params.people);
   const people = Number.isInteger(parsedPeople) ? Math.min(12, Math.max(1, parsedPeople)) : 3;
 
-  const initialDishes = findDishes({ meals, ingredientIds, people, pantry, language });
+  const initialDishes = findDishes({
+    meals,
+    ingredientIds,
+    people,
+    pantry,
+    allergies: preferences.allergies,
+    language,
+  });
   const [plannedRecipeIds] = useState(() => initialDishes.map((dish) => dish.id));
   const dishes = findDishes({
     meals,
@@ -151,8 +161,10 @@ export default function ResultsScreen() {
     people,
     pantry,
     recipeIds: plannedRecipeIds,
+    allergies: preferences.allergies,
     language,
   });
+  const hasAllergyFilters = getAllergyIngredientIds(preferences.allergies).size > 0;
   const weakMatch = hasWeakMatch(dishes);
   const [pendingRecipe, setPendingRecipe] = useState<MatchedRecipe | null>(null);
   const [cookedRecipeIds, setCookedRecipeIds] = useState<string[]>([]);
@@ -194,6 +206,12 @@ export default function ResultsScreen() {
       <Text style={styles.subtitle}>
         {meals.length > 0 ? meals.join(' · ') : 'Meal'} · {people} {people === 1 ? 'person' : 'people'}
       </Text>
+      {hasAllergyFilters ? (
+        <Text style={styles.allergyNotice}>
+          Recipes containing ingredients in your saved allergy preferences are hidden. Check
+          ingredient labels before cooking.
+        </Text>
+      ) : null}
 
       {weakMatch ? (
         <View style={styles.weakBox}>
@@ -219,7 +237,9 @@ export default function ResultsScreen() {
       ) : null}
       {!pantryLoading && dishes.length === 0 ? (
         <Text style={styles.empty}>
-          We couldn’t find recipes for that meal selection. Go back and choose breakfast, lunch, or dinner.
+          {hasAllergyFilters
+            ? 'No recipes matched this meal selection after applying your saved allergy preferences.'
+            : 'We couldn’t find recipes for that meal selection. Go back and choose breakfast, lunch, or dinner.'}
         </Text>
       ) : null}
       {!pantryLoading ? dishes.map((dish, index) => (
@@ -329,6 +349,16 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     color: '#5C4A3A',
     fontSize: 15,
+  },
+  allergyNotice: {
+    marginTop: 12,
+    marginBottom: 8,
+    padding: 12,
+    borderRadius: 10,
+    backgroundColor: '#FFF0EA',
+    color: '#9A3412',
+    fontSize: 14,
+    lineHeight: 20,
   },
   weakBox: {
     marginTop: 16,

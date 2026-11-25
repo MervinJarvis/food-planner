@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { PantryProvider } from '../context/PantryContext';
 import { LanguageProvider } from '../context/LanguageContext';
+import { ProfileProvider } from '../context/ProfileContext';
 
 function RootNavigator() {
   const { session, guest, loading } = useAuth();
@@ -33,9 +34,11 @@ export default function RootLayout() {
   return (
     <LanguageProvider>
       <AuthProvider>
-        <PantryProvider>
-          <RootNavigator />
-        </PantryProvider>
+        <ProfileProvider>
+          <PantryProvider>
+            <RootNavigator />
+          </PantryProvider>
+        </ProfileProvider>
       </AuthProvider>
     </LanguageProvider>
   );

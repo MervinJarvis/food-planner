@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router } from 'expo-router';
 import { CATEGORIES, INGREDIENTS } from '../../data/ingredients';
 import {
@@ -12,7 +12,9 @@ import type { MealType } from '../../data/recipes';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { usePantry } from '../../context/PantryContext';
+import { useProfile } from '../../context/ProfileContext';
 import { formatPantryQuantity, getPantryUnit } from '../../lib/pantry';
+import { getConflictingAllergies } from '../../lib/allergies';
 import { LanguagePicker } from '../../components/LanguagePicker';
 
 const MEALS: { id: MealType; label: string }[] = [
@@ -20,6 +22,12 @@ const MEALS: { id: MealType; label: string }[] = [
   { id: 'lunch', label: 'Lunch' },
   { id: 'dinner', label: 'Dinner' },
 ];
+
+type PlanningWarning = {
+  title: string;
+  message: string;
+  canContinue: boolean;
+};
 
 function Chip({
   label,
@@ -45,6 +53,7 @@ function Chip({
 export default function PlanScreen() {
   const { guest, signOut, prepareGuestAccountSignup } = useAuth();
   const { language } = useLanguage();
+  const { preferences, loading: profileLoading, error: profileError } = useProfile();
   const {
     pantry,
     loading: pantryLoading,
@@ -61,6 +70,7 @@ export default function PlanScreen() {
   const [stockError, setStockError] = useState<string | null>(null);
   const [accountError, setAccountError] = useState<string | null>(null);
   const [savingStock, setSavingStock] = useState(false);
+  const [planningWarning, setPlanningWarning] = useState<PlanningWarning | null>(null);
   const pantryById = useMemo(
     () => new Map(pantry.map((item) => [item.ingredientId, item])),
     [pantry],
@@ -122,7 +132,7 @@ export default function PlanScreen() {
     });
   };
 
-  const findDishes = () => {
+  const openResults = () => {
     const ingredientsToUse = (selectedIngredients ?? pantryIngredientIds)
       .filter((ingredientId) => pantryById.has(ingredientId));
     router.push({
@@ -133,6 +143,31 @@ export default function PlanScreen() {
         people: String(people),
       },
     });
+  };
+
+  const findDishes = () => {
+    const selectedIds = selectedIngredients ?? pantryIngredientIds;
+    const conflictingAllergies = getConflictingAllergies(selectedIds, preferences.allergies);
+
+    if (profileError) {
+      setPlanningWarning({
+        title: 'Profile preferences unavailable',
+        message: 'Saved allergy preferences could not be verified. Review and save your preferences before planning.',
+        canContinue: false,
+      });
+      return;
+    }
+
+    if (conflictingAllergies.length > 0) {
+      setPlanningWarning({
+        title: 'Allergy warning',
+        message: `Your profile lists an allergy to ${conflictingAllergies.join(', ')}. Recipes containing those ingredients will be hidden.`,
+        canContinue: true,
+      });
+      return;
+    }
+
+    openResults();
   };
 
   const addSearchIngredientToStock = async () => {
@@ -164,6 +199,7 @@ export default function PlanScreen() {
   };
 
   return (
+    <>
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <View style={styles.hero}>
         <View style={styles.heroTopRow}>
@@ -372,8 +408,8 @@ export default function PlanScreen() {
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Find dishes"
-        disabled={meals.length === 0 || pantryLoading || Boolean(pantryError)}
-        style={[styles.button, (meals.length === 0 || pantryLoading || Boolean(pantryError)) && styles.buttonDisabled]}
+        disabled={meals.length === 0 || pantryLoading || profileLoading || Boolean(pantryError)}
+        style={[styles.button, (meals.length === 0 || pantryLoading || profileLoading || Boolean(pantryError)) && styles.buttonDisabled]}
         onPress={findDishes}
       >
         <Text style={styles.buttonText}>Find dishes</Text>
@@ -381,6 +417,44 @@ export default function PlanScreen() {
       </Pressable>
       <Text style={styles.note}>No AI-generated recipes. Just pantry matches and clear steps.</Text>
     </ScrollView>
+    <Modal
+      visible={planningWarning !== null}
+      transparent
+      animationType="fade"
+      onRequestClose={() => setPlanningWarning(null)}
+    >
+      <View style={styles.warningBackdrop}>
+        <View style={styles.warningCard}>
+          <Text style={styles.warningTitle}>{planningWarning?.title}</Text>
+          <Text style={styles.warningMessage}>{planningWarning?.message}</Text>
+          <View style={styles.warningActions}>
+            {planningWarning?.canContinue ? (
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => setPlanningWarning(null)}
+                style={styles.warningCancelButton}
+              >
+                <Text style={styles.warningCancelText}>Go back</Text>
+              </Pressable>
+            ) : null}
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => {
+                const canContinue = planningWarning?.canContinue;
+                setPlanningWarning(null);
+                if (canContinue) openResults();
+              }}
+              style={styles.warningContinueButton}
+            >
+              <Text style={styles.warningContinueText}>
+                {planningWarning?.canContinue ? 'Show safe dishes' : 'OK'}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 }
 
@@ -674,5 +748,63 @@ const styles = StyleSheet.create({
     color: '#7A6B5E',
     fontSize: 13,
     textAlign: 'center',
+  },
+  warningBackdrop: {
+    flex: 1,
+    padding: 20,
+    backgroundColor: 'rgba(25, 20, 15, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warningCard: {
+    width: '100%',
+    maxWidth: 440,
+    padding: 20,
+    borderRadius: 18,
+    backgroundColor: '#FFF8F0',
+  },
+  warningTitle: {
+    color: '#7A2E0E',
+    fontSize: 22,
+    fontWeight: '800',
+  },
+  warningMessage: {
+    marginTop: 8,
+    color: '#5C4A3A',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  warningActions: {
+    marginTop: 18,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-end',
+    gap: 10,
+  },
+  warningCancelButton: {
+    minHeight: 46,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#EDE2D7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warningCancelText: {
+    color: '#3D2B1F',
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  warningContinueButton: {
+    minHeight: 46,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#2D6A4F',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  warningContinueText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '800',
   },
 });
