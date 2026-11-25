@@ -16,7 +16,7 @@ Use `npm start` to open the app on a device or simulator.
 The app uses Supabase email/password authentication. Usernames and a synchronized copy of the account email are stored in `public.profiles`. Supabase Auth stores the email and securely hashes the password in its protected `auth.users` system table; the app never stores plaintext passwords. Users sign in with their unique username or phone number and password. Pantry rows are protected by database row-level security and can only be read or changed by their owner.
 
 1. Create a Supabase project and enable the Email auth provider.
-2. Apply both SQL migrations, in timestamp order, from `supabase/migrations/` in the Supabase SQL Editor (or link the project and run `supabase db push`).
+2. Apply all SQL migrations, in timestamp order, from `supabase/migrations/` in the Supabase SQL Editor (or link the project and run `supabase db push`). The community migration creates the public posts feed, row-level access policies, and public image bucket.
 3. Copy `.env.example` to `.env` and set your project URL and publishable key from Supabase **Project Settings → API**.
 4. Install and sign in to the [Supabase CLI](https://supabase.com/docs/guides/local-development/cli/getting-started), link this repository to the project, and deploy the username-login function:
 
@@ -33,6 +33,10 @@ The app uses Supabase email/password authentication. Usernames and a synchronize
 The `.env` file only connects the app to Supabase; it does not create database tables or deploy the login function. If sign-up fails while saving a new user, apply the migrations and check that the profile-creation trigger exists. If sign-in fails, deploy `login-with-username` and confirm its `verify_jwt = false` setting is applied.
 
 On sign-up, existing device pantry stock is imported into that account once. New pantry changes are saved in Supabase and remain isolated between accounts.
+
+## Community
+
+The Community tab lets anyone browse public posts. Signed-in users can share thoughts, dish ideas, and one photo per post. Photos are uploaded to the public `community-images` Supabase Storage bucket; the community migration restricts uploads to each user's own folder and limits image size to 8 MB. Apply the community migration before using the feed.
 
 ## Guest mode
 

@@ -23,7 +23,14 @@
     },
     "plugins": [
       "expo-router",
-      "expo-status-bar"
+      "expo-status-bar",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Food Planner to access photos you choose to share with the community.",
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }

@@ -26,6 +26,19 @@ export type MatchedRecipe = {
   accompaniments: string[];
 };
 
+const proteinIngredientIds = new Set(['beef', 'chicken', 'egg', 'fish', 'mutton']);
+
+function hasSelectedProtein(
+  recipe: Pick<Recipe, 'ingredients'>,
+  selectedIds: ReadonlySet<string>,
+): boolean {
+  return recipe.ingredients.some(
+    (ingredient) => ingredient.required &&
+      proteinIngredientIds.has(ingredient.id) &&
+      selectedIds.has(ingredient.id),
+  );
+}
+
 function scoreRecipe(
   recipe: Recipe,
   selectedIds: ReadonlySet<string>,
@@ -138,24 +151,23 @@ export function findDishes({
   const mealSet = new Set(meals);
   const ranked = RECIPES
     .filter((recipe) =>
-      recipe.mealTypes.some((meal) => mealSet.has(meal)) &&
+      (recipe.mealTypes.some((meal) => mealSet.has(meal)) ||
+        hasSelectedProtein(recipe, selectedIds)) &&
       (!recipeIds || recipeIds.includes(recipe.id)))
     .map((recipe) => buildResult(recipe, people, selectedIds, pantry, language))
-    .sort((a, b) => b.score - a.score || b.matchRatio - a.matchRatio);
+    .sort((a, b) => {
+      const priority = (recipe: MatchedRecipe) => {
+        if (recipe.kind === 'chutney') return 3;
+        if (hasSelectedProtein(recipe, selectedIds)) return 0;
+        if (mealSet.has('lunch') && recipe.id === 'tomato-rice') return 1;
+        return 2;
+      };
+      return priority(a) - priority(b) || b.score - a.score || b.matchRatio - a.matchRatio;
+    });
 
   if (ranked.length === 0) return [];
 
-  const first = ranked[0];
-  if (mealSet.has('breakfast') && first.kind === 'chutney') {
-    const coconutChutney = ranked.find((recipe) => recipe.id === 'coconut-chutney');
-    const second = selectedIds.has('coconut') && coconutChutney?.id !== first.id
-      ? coconutChutney
-      : ranked.find((recipe) => recipe.kind === 'chutney' && recipe.id !== first.id);
-    if (second) return [first, second];
-  }
-
-  const second = ranked.find((recipe) => recipe.id !== first.id);
-  return second ? [first, second] : [first];
+  return ranked.slice(0, 4);
 }
 
 export function hasWeakMatch(recipes: MatchedRecipe[]): boolean {

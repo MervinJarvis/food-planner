@@ -32,6 +32,13 @@ export default function TabLayout() {
           tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🧺</Text>,
         }}
       />
+      <Tabs.Screen
+        name="community"
+        options={{
+          title: 'Community',
+          tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>💬</Text>,
+        }}
+      />
     </Tabs>
   );
 }

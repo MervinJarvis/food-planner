@@ -81,6 +81,7 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'chicken', name: 'Chicken', category: 'meat' },
   { id: 'egg', name: 'Egg', category: 'meat' },
   { id: 'mutton', name: 'Mutton', category: 'meat' },
+  { id: 'beef', name: 'Beef', category: 'meat' },
   { id: 'fish', name: 'Fish', category: 'meat' },
 
   { id: 'lemon', name: 'Lemon', category: 'fruits' },
