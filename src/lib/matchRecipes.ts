@@ -14,6 +14,7 @@ export type MatchedRecipe = {
   id: string;
   name: string;
   kind: Recipe['kind'];
+  tags: string[];
   nutritionPerServing: RecipeNutrition;
   score: number;
   matchedRequired: number;
@@ -123,6 +124,7 @@ function buildResult(
     id: recipe.id,
     name: recipe.name,
     kind: recipe.kind,
+    tags: recipe.tags ?? [],
     nutritionPerServing: recipe.nutritionPerServing,
     ...result,
     ingredients,

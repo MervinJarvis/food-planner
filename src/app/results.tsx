@@ -43,6 +43,15 @@ function RecipeCard({
     <View style={styles.card}>
       <Text style={styles.kicker}>DISH {index + 1}</Text>
       <Text style={styles.dishName}>{recipe.name}</Text>
+      {recipe.tags.length > 0 ? (
+        <View style={styles.tagsRow}>
+          {recipe.tags.map((tag) => (
+            <View key={tag} style={styles.tag}>
+              <Text style={styles.tagText}>{tag}</Text>
+            </View>
+          ))}
+        </View>
+      ) : null}
       <View style={styles.dishNutrition}>
         <Text style={styles.dishNutritionTitle}>DISH {index + 1} nutrition per person</Text>
         <Text style={styles.dishNutritionValues}>
@@ -381,6 +390,23 @@ const styles = StyleSheet.create({
     color: '#7A2E0E',
     fontSize: 23,
     fontWeight: '800',
+  },
+  tagsRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  tag: {
+    borderRadius: 999,
+    backgroundColor: '#F6E6CF',
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+  },
+  tagText: {
+    color: '#7A2E0E',
+    fontSize: 12,
+    fontWeight: '700',
   },
   dishNutrition: {
     marginTop: 10,

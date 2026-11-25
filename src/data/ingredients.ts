@@ -186,6 +186,8 @@ export const INGREDIENTS: Ingredient[] = [
   { id: 'paneer', name: 'Cottage cheese / paneer', category: 'dairy_products' },
   { id: 'cheese_slices', name: 'Cheese slices', category: 'dairy_products' },
   { id: 'butter', name: 'Butter', category: 'dairy_products' },
+  { id: 'curd', name: 'Curd / yogurt', category: 'dairy_products' },
+  { id: 'milk', name: 'Milk', category: 'dairy_products' },
   { id: 'idli_dosa_batter', name: 'Idli dosa batter (readymade)', category: 'dairy_products' },
   { id: 'fresh_cream', name: 'Fresh cream', category: 'dairy_products' },
 ];
