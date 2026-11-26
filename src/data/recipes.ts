@@ -18,6 +18,7 @@ export type RecipeNutrition = {
 export type Recipe = {
   id: string;
   name: string;
+  primaryIngredientIds: string[];
   kind: 'chutney' | 'side' | 'main';
   mealTypes: MealType[];
   tags?: string[];
@@ -34,6 +35,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'tomato-chutney',
     name: 'Tomato Chutney',
+    primaryIngredientIds: ['tomato'],
     kind: 'chutney',
     mealTypes: ['breakfast', 'lunch'],
     baseServings,
@@ -57,6 +59,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'coconut-chutney',
     name: 'Coconut Chutney',
+    primaryIngredientIds: ['coconut'],
     kind: 'chutney',
     mealTypes: ['breakfast'],
     baseServings,
@@ -81,6 +84,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'onion-chutney',
     name: 'Onion Chutney',
+    primaryIngredientIds: ['onion'],
     kind: 'chutney',
     mealTypes: ['breakfast', 'lunch'],
     baseServings,
@@ -103,6 +107,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'potato-masala',
     name: 'Potato Masala',
+    primaryIngredientIds: ['potato'],
     kind: 'side',
     mealTypes: ['breakfast', 'lunch'],
     baseServings,
@@ -127,6 +132,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'tomato-rice',
     name: 'Tomato Rice',
+    primaryIngredientIds: ['tomato', 'steamed_or_raw_rice'],
     kind: 'main',
     mealTypes: ['lunch', 'dinner'],
     tags: ['Bachelors', 'working women'],
@@ -151,6 +157,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'mixed-vegetable-curry',
     name: 'Mixed Vegetable Curry',
+    primaryIngredientIds: ['carrot', 'beans'],
     kind: 'main',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
@@ -178,6 +185,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'vegetable-poriyal',
     name: 'Vegetable Poriyal',
+    primaryIngredientIds: ['spinach'],
     kind: 'side',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
@@ -202,6 +210,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'chicken-curry',
     name: 'Simple Chicken Curry',
+    primaryIngredientIds: ['chicken'],
     kind: 'main',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
@@ -230,6 +239,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'mutton-curry',
     name: 'South Indian Mutton Curry',
+    primaryIngredientIds: ['mutton'],
     kind: 'main',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
@@ -259,6 +269,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'beef-curry',
     name: 'Beef Curry',
+    primaryIngredientIds: ['beef'],
     kind: 'main',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
@@ -288,6 +299,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'fish-curry',
     name: 'South Indian Fish Curry',
+    primaryIngredientIds: ['fish'],
     kind: 'main',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
@@ -313,6 +325,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'egg-pepper-fry',
     name: 'Egg Pepper Fry',
+    primaryIngredientIds: ['egg'],
     kind: 'main',
     mealTypes: ['breakfast', 'lunch', 'dinner'],
     baseServings,
@@ -335,6 +348,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'brinjal-curry',
     name: 'Brinjal Curry',
+    primaryIngredientIds: ['brinjal'],
     kind: 'main',
     mealTypes: ['lunch', 'dinner'],
     baseServings,
@@ -359,6 +373,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'curd-rice',
     name: 'Curd Rice',
+    primaryIngredientIds: ['curd', 'steamed_or_raw_rice'],
     kind: 'main',
     mealTypes: ['dinner', 'lunch'],
     tags: ['light dinner', 'Bachelors', 'working women'],
@@ -387,6 +402,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'tomato-rasam-rice',
     name: 'Tomato Rasam with Rice',
+    primaryIngredientIds: ['tomato', 'steamed_or_raw_rice'],
     kind: 'main',
     mealTypes: ['dinner', 'lunch'],
     tags: ['light dinner', 'Everyone'],
@@ -417,6 +433,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'vegetable-kurma',
     name: 'Vegetable Kurma',
+    primaryIngredientIds: ['carrot', 'beans', 'potato'],
     kind: 'main',
     mealTypes: ['dinner', 'lunch'],
     tags: ['Homemakers'],
@@ -451,6 +468,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'bisi-bele-bath',
     name: 'Bisi Bele Bath',
+    primaryIngredientIds: ['steamed_or_raw_rice', 'toor_dal', 'carrot', 'beans'],
     kind: 'main',
     mealTypes: ['dinner', 'lunch'],
     tags: ['weekend special', 'Homemakers', 'one-pot'],
@@ -483,6 +501,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'chettinad-egg-curry',
     name: 'Chettinad-style Egg Curry',
+    primaryIngredientIds: ['egg'],
     kind: 'main',
     mealTypes: ['dinner', 'lunch'],
     tags: ['Bachelors', 'working women'],
@@ -515,6 +534,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'kerala-fish-curry',
     name: 'Kerala Fish Curry',
+    primaryIngredientIds: ['fish'],
     kind: 'main',
     mealTypes: ['dinner', 'lunch'],
     tags: ['weekend special', 'Homemakers'],
@@ -545,6 +565,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'chettinad-chicken-curry',
     name: 'Chettinad Chicken Curry',
+    primaryIngredientIds: ['chicken'],
     kind: 'main',
     mealTypes: ['dinner', 'lunch'],
     tags: ['weekend special', 'Homemakers'],
@@ -579,6 +600,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'ragi-mudde-saaru',
     name: 'Ragi Mudde with Saaru',
+    primaryIngredientIds: ['ragi_flour', 'toor_dal'],
     kind: 'main',
     mealTypes: ['dinner', 'lunch'],
     tags: ['Homemakers'],
@@ -607,6 +629,7 @@ export const RECIPES: Recipe[] = [
   {
     id: 'cabbage-kootu',
     name: 'Cabbage Kootu with Rice',
+    primaryIngredientIds: ['cabbage', 'steamed_or_raw_rice'],
     kind: 'main',
     mealTypes: ['dinner', 'lunch'],
     tags: ['light dinner', 'Homemakers', 'working women'],

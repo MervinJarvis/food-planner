@@ -41,6 +41,13 @@ function hasSelectedProtein(
   );
 }
 
+function hasSelectedPrimaryIngredient(
+  recipe: Pick<Recipe, 'primaryIngredientIds'>,
+  selectedIds: ReadonlySet<string>,
+): boolean {
+  return recipe.primaryIngredientIds.some((id) => selectedIds.has(id));
+}
+
 function scoreRecipe(
   recipe: Recipe,
   selectedIds: ReadonlySet<string>,
@@ -159,6 +166,7 @@ export function findDishes({
     .filter((recipe) =>
       (recipe.mealTypes.some((meal) => mealSet.has(meal)) ||
         hasSelectedProtein(recipe, selectedIds)) &&
+      (selectedIds.size === 0 || hasSelectedPrimaryIngredient(recipe, selectedIds)) &&
       !recipe.ingredients.some((ingredient) => allergenIds.has(ingredient.id)) &&
       (!recipeIds || recipeIds.includes(recipe.id)))
     .map((recipe) => buildResult(recipe, people, selectedIds, pantry, language))
