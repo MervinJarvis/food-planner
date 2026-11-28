@@ -1,8 +1,9 @@
 import { getIngredientName as getLocalizedIngredientName } from '../data/ingredientTranslations';
 import type { AppLanguage } from '../data/ingredientTranslations';
 import { RECIPES, type MealType, type Recipe, type RecipeNutrition } from '../data/recipes';
+import type { DietType } from '../context/ProfileContext';
 import { getAllergyIngredientIds } from './allergies';
-import { formatQuantity, formatSteps, type ScaledIngredient } from './formatSteps';
+import { formatSteps, type ScaledIngredient } from './formatSteps';
 import {
   convertQuantity,
   formatPantryQuantity,
@@ -117,7 +118,6 @@ function buildResult(
       ...ingredient,
       name,
       quantity,
-      label: formatQuantity(quantity, ingredient.unit, name, language),
       selected: enoughStock,
       missing: ingredient.required && !ingredient.pantryStaple && !enoughStock,
       availableLabel: !selectedIds.has(ingredient.id)
@@ -149,6 +149,7 @@ export function findDishes({
   pantry,
   recipeIds,
   allergies = [],
+  dietType = 'no-preference',
   language = 'en',
 }: {
   meals: MealType[];
@@ -157,6 +158,7 @@ export function findDishes({
   pantry: PantryStock[];
   recipeIds?: string[];
   allergies?: string[];
+  dietType?: DietType;
   language?: AppLanguage;
 }): MatchedRecipe[] {
   const selectedIds = new Set(ingredientIds);
@@ -167,6 +169,9 @@ export function findDishes({
       (recipe.mealTypes.some((meal) => mealSet.has(meal)) ||
         hasSelectedProtein(recipe, selectedIds)) &&
       (selectedIds.size === 0 || hasSelectedPrimaryIngredient(recipe, selectedIds)) &&
+      !(dietType === 'vegetarian' &&
+        recipe.ingredients.some((ingredient) => proteinIngredientIds.has(ingredient.id))) &&
+      !(mealSet.has('lunch') && recipe.kind === 'chutney') &&
       !recipe.ingredients.some((ingredient) => allergenIds.has(ingredient.id)) &&
       (!recipeIds || recipeIds.includes(recipe.id)))
     .map((recipe) => buildResult(recipe, people, selectedIds, pantry, language))
@@ -182,7 +187,7 @@ export function findDishes({
 
   if (ranked.length === 0) return [];
 
-  return ranked.slice(0, 4);
+  return ranked.slice(0, 10);
 }
 
 export function hasWeakMatch(recipes: MatchedRecipe[]): boolean {

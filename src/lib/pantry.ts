@@ -28,6 +28,9 @@ const PANTRY_UNIT_BY_ID: Record<string, IngredientUnit> = {
   ginger: 'tsp',
   garlic: 'clove',
   curry_leaves: 'leaf',
+  cooked_rice: 'cup',
+  curd: 'cup',
+  poha: 'tbsp',
   salt: 'oz',
   pepper: 'oz',
   chilli_powder: 'oz',
@@ -107,10 +110,25 @@ const SPICE_GRAMS_PER_TSP: Record<string, number> = {
   cumin: 2.1,
   coriander_powder: 1.8,
   garam_masala: 2,
+  fenugreek_seeds: 3.7,
+  urad_dal: 4,
+  chana_dal: 4,
+  cooking_soda: 4.6,
+  yeast: 3,
+  sugar: 4,
 };
 
 const INGREDIENT_GRAMS_PER_CUP: Record<string, number> = {
   urad_dal: 180,
+  idli_rice: 185,
+  dosa_rice: 185,
+  raw_rice: 185,
+  pongal_raw_rice: 185,
+  rava: 170,
+  rice_flour: 125,
+  whole_green_moong: 200,
+  yellow_moong_dal: 200,
+  idli_dosa_batter: 250,
 };
 
 // Approximate weights let recipe measures continue to match pantry weights.
@@ -175,6 +193,23 @@ export function formatPantryQuantity(
   }
   if (unit === 'g') return `${amount} g ${name}`;
   return `${amount} ${unit} ${name}`;
+}
+
+export function formatPantryAmount(quantity: number, unit: IngredientUnit): string {
+  const amount = Number.isInteger(quantity)
+    ? String(quantity)
+    : String(Number(quantity.toFixed(2)));
+
+  if (unit === 'piece') {
+    return `${amount} ${quantity === 1 ? 'piece' : 'pieces'}`;
+  }
+  if (unit === 'clove') {
+    return `${amount} ${quantity === 1 ? 'clove' : 'cloves'}`;
+  }
+  if (unit === 'leaf') {
+    return `${amount} ${quantity === 1 ? 'leaf' : 'leaves'}`;
+  }
+  return `${amount}${unit}`;
 }
 
 export function getRecipeUsage(ingredients: RecipeIngredient[], people: number): RecipeUsage[] {

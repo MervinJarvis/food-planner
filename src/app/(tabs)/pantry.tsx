@@ -1,7 +1,19 @@
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import { INGREDIENTS } from '../../data/ingredients';
-import { getIngredientName, getIngredientSearchNames } from '../../data/ingredientTranslations';
+import { useMemo, useRef, useState } from 'react';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type ScrollViewInstance,
+} from 'react-native';
+import { CATEGORIES, INGREDIENTS } from '../../data/ingredients';
+import {
+  getCategoryName,
+  getIngredientName,
+  getIngredientSearchNames,
+} from '../../data/ingredientTranslations';
 import type { Ingredient } from '../../data/ingredients';
 import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
@@ -55,6 +67,35 @@ export default function PantryScreen() {
   const [amount, setAmount] = useState('1');
   const [actionError, setActionError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [tourStep, setTourStep] = useState<number | null>(null);
+  const [addSectionY, setAddSectionY] = useState(0);
+  const [stockSectionY, setStockSectionY] = useState(0);
+  const scrollViewRef = useRef<ScrollViewInstance>(null);
+
+  const openQuickGuide = () => {
+    setTourStep(0);
+    scrollViewRef.current?.scrollTo({ y: Math.max(0, addSectionY - 16), animated: true });
+  };
+
+  const advanceTour = () => {
+    if (tourStep === null) return;
+    if (tourStep < 2) {
+      const nextStep = tourStep + 1;
+      setTourStep(nextStep);
+      const nextY = nextStep === 2 ? stockSectionY : addSectionY;
+      scrollViewRef.current?.scrollTo({ y: Math.max(0, nextY - 16), animated: true });
+    } else {
+      setTourStep(null);
+    }
+  };
+
+  const previousTour = () => {
+    if (tourStep === null || tourStep === 0) return;
+    const previousStep = tourStep - 1;
+    setTourStep(previousStep);
+    const previousY = previousStep === 2 ? stockSectionY : addSectionY;
+    scrollViewRef.current?.scrollTo({ y: Math.max(0, previousY - 16), animated: true });
+  };
 
   const handleAccountAction = async (action: () => Promise<void>) => {
     setActionError(null);
@@ -75,6 +116,18 @@ export default function PantryScreen() {
       ),
     ).slice(0, 8);
   }, [language, search]);
+
+  const pantryByCategory = useMemo(() => {
+    const stockById = new Map(pantry.map((item) => [item.ingredientId, item]));
+    return CATEGORIES.map((category) => ({
+      category,
+      items: INGREDIENTS.flatMap((ingredient) => {
+        if (ingredient.category !== category.id) return [];
+        const stock = stockById.get(ingredient.id);
+        return stock ? [{ ingredient, stock }] : [];
+      }),
+    })).filter((group) => group.items.length > 0);
+  }, [pantry]);
 
   const addIngredient = async () => {
     if (!selectedIngredient) {
@@ -120,20 +173,35 @@ export default function PantryScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <>
+    <ScrollView
+      ref={scrollViewRef}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.hero}>
         <View style={styles.heroTopRow}>
           <Text style={styles.eyebrow}>YOUR KITCHEN STOCK</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Go to login"
-            onPress={() => handleAccountAction(
-              guest ? prepareGuestAccountSignup : signOut,
-            )}
-            style={styles.loginButton}
-          >
-            <Text style={styles.loginButtonText}>Login</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open quick guide"
+              onPress={openQuickGuide}
+              style={styles.quickGuideButton}
+            >
+              <Text style={styles.quickGuideButtonText}>Quick guide</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Go to login"
+              onPress={() => handleAccountAction(
+                guest ? prepareGuestAccountSignup : signOut,
+              )}
+              style={styles.loginButton}
+            >
+              <Text style={styles.loginButtonText}>Login</Text>
+            </Pressable>
+          </View>
         </View>
         <Text style={styles.title}>Pantry</Text>
         <Text style={styles.subtitle}>
@@ -155,6 +223,10 @@ export default function PantryScreen() {
       ) : null}
       {actionError ? <Text style={styles.actionError}>{actionError}</Text> : null}
 
+      <View
+        onLayout={(event) => setAddSectionY(event.nativeEvent.layout.y)}
+        style={tourStep === 0 || tourStep === 1 ? styles.tourHighlight : undefined}
+      >
       <Text style={styles.section}>Add ingredients</Text>
       <TextInput
         accessibilityLabel="Search pantry ingredients"
@@ -210,8 +282,12 @@ export default function PantryScreen() {
           </Pressable>
         </View>
       ) : null}
+      </View>
 
-      <View style={styles.inventoryHeading}>
+      <View
+        onLayout={(event) => setStockSectionY(event.nativeEvent.layout.y)}
+        style={[styles.inventoryHeading, tourStep === 2 && styles.tourHighlight]}
+      >
         <Text style={styles.section}>Your stock</Text>
         <Text style={styles.itemCount}>{pantry.length} {pantry.length === 1 ? 'item' : 'items'}</Text>
       </View>
@@ -222,52 +298,108 @@ export default function PantryScreen() {
           <Text style={styles.emptyTitle}>Nothing in your pantry yet</Text>
           <Text style={styles.empty}>Search above to add your first ingredient.</Text>
         </View>
-      ) : pantry.map((item) => {
-        const ingredient = INGREDIENTS.find(({ id }) => id === item.ingredientId);
-        if (!ingredient) return null;
-        const step = item.unit === 'piece' || item.unit === 'clove' || item.unit === 'leaf'
-          ? 1
-          : item.unit === 'g'
-            ? 100
-            : item.unit === 'kg'
-              ? 0.1
-              : item.unit === 'oz'
-                ? 0.25
-                : 0.5;
+      ) : pantryByCategory.map(({ category, items }) => (
+        <View key={category.id} style={styles.categoryBlock}>
+          <Text style={styles.category}>{getCategoryName(category.id, language)}</Text>
+          {items.map(({ ingredient, stock }) => {
+            const step = stock.unit === 'piece' || stock.unit === 'clove' || stock.unit === 'leaf'
+              ? 1
+              : stock.unit === 'g'
+                ? 100
+                : stock.unit === 'kg'
+                  ? 0.1
+                  : stock.unit === 'oz'
+                    ? 0.25
+                    : 0.5;
 
-        return (
-          <View key={item.ingredientId} style={styles.stockCard}>
-            <View style={styles.stockInfo}>
-              <Text style={styles.stockName}>{getIngredientName(ingredient.id, language)}</Text>
-              <Text style={styles.stockAmount}>
-                {formatPantryQuantity(item.quantity, item.unit, item.ingredientId)}
-              </Text>
-            </View>
-            <View style={styles.stockActions}>
-              <QuantityButton
-                label="−"
-                accessibilityLabel={`Remove ${step} ${item.unit} of ${getIngredientName(ingredient.id, language)}`}
-                disabled={item.quantity < step}
-                onPress={() => adjustStock(item.ingredientId, Math.max(0, item.quantity - step))}
-              />
-              <QuantityButton
-                label="+"
-                accessibilityLabel={`Add ${step} ${item.unit} of ${getIngredientName(ingredient.id, language)}`}
-                onPress={() => adjustStock(item.ingredientId, item.quantity + step)}
-              />
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel={`Remove ${getIngredientName(ingredient.id, language)} from pantry`}
-                onPress={() => deleteStock(item.ingredientId)}
-                style={styles.removeButton}
-              >
-                <Text style={styles.removeText}>Remove</Text>
-              </Pressable>
-            </View>
-          </View>
-        );
-      })}
+            return (
+              <View key={stock.ingredientId} style={styles.stockCard}>
+                <View style={styles.stockInfo}>
+                  <Text style={styles.stockName}>{getIngredientName(ingredient.id, language)}</Text>
+                  <Text style={styles.stockAmount}>
+                    {formatPantryQuantity(stock.quantity, stock.unit, stock.ingredientId)}
+                  </Text>
+                </View>
+                <View style={styles.stockActions}>
+                  <QuantityButton
+                    label="−"
+                    accessibilityLabel={`Remove ${step} ${stock.unit} of ${getIngredientName(ingredient.id, language)}`}
+                    disabled={stock.quantity < step}
+                    onPress={() => adjustStock(
+                      stock.ingredientId,
+                      Math.max(0, stock.quantity - step),
+                    )}
+                  />
+                  <QuantityButton
+                    label="+"
+                    accessibilityLabel={`Add ${step} ${stock.unit} of ${getIngredientName(ingredient.id, language)}`}
+                    onPress={() => adjustStock(stock.ingredientId, stock.quantity + step)}
+                  />
+                  <Pressable
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remove ${getIngredientName(ingredient.id, language)} from pantry`}
+                    onPress={() => deleteStock(stock.ingredientId)}
+                    style={styles.removeButton}
+                  >
+                    <Text style={styles.removeText}>Remove</Text>
+                  </Pressable>
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      ))}
     </ScrollView>
+    {tourStep !== null ? (
+      <View style={styles.tourTip}>
+        <View style={styles.tourTipHeading}>
+          <Text style={styles.tourTipStep}>STEP {tourStep + 1} OF 3</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close quick tour"
+            onPress={() => setTourStep(null)}
+            hitSlop={8}
+          >
+            <Text style={styles.tourTipClose}>×</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.tourTipTitle}>
+          {tourStep === 0
+            ? 'Find an ingredient'
+            : tourStep === 1
+              ? 'Add an amount'
+              : 'Manage your stock'}
+        </Text>
+        <Text style={styles.tourTipMessage}>
+          {tourStep === 0
+            ? 'Search for an ingredient, then tap a suggestion to select it.'
+            : tourStep === 1
+              ? 'Enter the amount in the ingredient’s unit and tap Add stock.'
+              : 'Use plus or minus to adjust quantities, or Remove to delete an item. Cooking a recipe updates this stock.'}
+        </Text>
+        <View style={styles.tourTipActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: tourStep === 0 }}
+            disabled={tourStep === 0}
+            onPress={previousTour}
+            style={[styles.tourTipPrevButton, tourStep === 0 && styles.tourTipPrevButtonDisabled]}
+          >
+            <Text style={styles.tourTipPrevButtonText}>Prev</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={advanceTour}
+            style={styles.tourTipNextButton}
+          >
+            <Text style={styles.tourTipNextButtonText}>
+              {tourStep === 2 ? 'Finish' : 'Next'}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    ) : null}
+    </>
   );
 }
 
@@ -289,6 +421,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   eyebrow: {
     color: '#C45C26',
     fontSize: 12,
@@ -307,6 +444,108 @@ const styles = StyleSheet.create({
   loginButtonText: {
     color: '#FFFFFF',
     fontSize: 15,
+    fontWeight: '800',
+  },
+  quickGuideButton: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#C45C26',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickGuideButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  tourHighlight: {
+    padding: 8,
+    marginHorizontal: -8,
+    borderWidth: 2,
+    borderColor: '#C45C26',
+    borderRadius: 14,
+  },
+  tourTip: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 16,
+    zIndex: 20,
+    maxWidth: 440,
+    alignSelf: 'center',
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E8D5C4',
+    borderRadius: 16,
+    backgroundColor: '#FFF8F0',
+    shadowColor: '#3D2B1F',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  tourTipHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tourTipStep: {
+    color: '#C45C26',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  tourTipClose: {
+    color: '#7A6B5E',
+    fontSize: 24,
+    lineHeight: 24,
+  },
+  tourTipTitle: {
+    marginTop: 4,
+    color: '#7A2E0E',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  tourTipMessage: {
+    marginTop: 6,
+    color: '#5C4A3A',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  tourTipActions: {
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  tourTipPrevButton: {
+    minHeight: 40,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#EDE2D7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tourTipPrevButtonText: {
+    color: '#3D2B1F',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  tourTipPrevButtonDisabled: {
+    opacity: 0.45,
+  },
+  tourTipNextButton: {
+    minHeight: 40,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#2D6A4F',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tourTipNextButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
     fontWeight: '800',
   },
   title: {
@@ -413,6 +652,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  categoryBlock: {
+    marginBottom: 8,
+  },
+  category: {
+    marginBottom: 8,
+    color: '#2D6A4F',
+    fontSize: 14,
+    fontWeight: '700',
   },
   itemCount: {
     marginTop: 12,

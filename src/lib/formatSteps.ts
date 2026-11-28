@@ -6,7 +6,6 @@ import type { Recipe, RecipeIngredient } from '../data/recipes';
 export type ScaledIngredient = RecipeIngredient & {
   name: string;
   quantity: number;
-  label: string;
   selected: boolean;
   missing: boolean;
   availableLabel: string;
@@ -14,6 +13,24 @@ export type ScaledIngredient = RecipeIngredient & {
 
 function formatNumber(quantity: number): string {
   return String(quantity);
+}
+
+export function formatQuantityAmount(
+  quantity: number,
+  unit: Recipe['ingredients'][number]['unit'],
+): string {
+  const amount = roundRecipeQuantity(quantity, unit);
+
+  if (unit === 'piece') {
+    return `${formatNumber(amount)} ${amount === 1 ? 'piece' : 'pieces'}`;
+  }
+  if (unit === 'clove') {
+    return `${formatNumber(amount)} ${amount === 1 ? 'clove' : 'cloves'}`;
+  }
+  if (unit === 'leaf') {
+    return `${formatNumber(amount)} ${amount === 1 ? 'leaf' : 'leaves'}`;
+  }
+  return `${formatNumber(amount)} ${unit}`;
 }
 
 function pluralize(name: string): string {
@@ -64,7 +81,7 @@ export function roundRecipeQuantity(
     return Math.max(1, Math.round(quantity));
   }
   if (unit === 'g') return Math.max(10, Math.round(quantity / 10) * 10);
-  return Math.max(0.5, Math.round(quantity * 2) / 2);
+  return Math.max(0.25, Math.round(quantity * 4) / 4);
 }
 
 export function formatSteps(

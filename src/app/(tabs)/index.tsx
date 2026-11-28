@@ -1,5 +1,15 @@
-import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useMemo, useRef, useState } from 'react';
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+  type ScrollViewInstance,
+  type TextInputInstance,
+} from 'react-native';
 import { router } from 'expo-router';
 import { CATEGORIES, INGREDIENTS } from '../../data/ingredients';
 import {
@@ -13,7 +23,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useLanguage } from '../../context/LanguageContext';
 import { usePantry } from '../../context/PantryContext';
 import { useProfile } from '../../context/ProfileContext';
-import { formatPantryQuantity, getPantryUnit } from '../../lib/pantry';
+import { formatPantryAmount, getPantryUnit } from '../../lib/pantry';
 import { getConflictingAllergies } from '../../lib/allergies';
 import { LanguagePicker } from '../../components/LanguagePicker';
 
@@ -71,6 +81,12 @@ export default function PlanScreen() {
   const [accountError, setAccountError] = useState<string | null>(null);
   const [savingStock, setSavingStock] = useState(false);
   const [planningWarning, setPlanningWarning] = useState<PlanningWarning | null>(null);
+  const [tourStep, setTourStep] = useState<number | null>(null);
+  const [ingredientSectionY, setIngredientSectionY] = useState(0);
+  const [peopleSectionY, setPeopleSectionY] = useState(0);
+  const [findDishesY, setFindDishesY] = useState(0);
+  const scrollViewRef = useRef<ScrollViewInstance>(null);
+  const ingredientSearchRef = useRef<TextInputInstance>(null);
   const pantryById = useMemo(
     () => new Map(pantry.map((item) => [item.ingredientId, item])),
     [pantry],
@@ -147,6 +163,17 @@ export default function PlanScreen() {
 
   const findDishes = () => {
     const selectedIds = selectedIngredients ?? pantryIngredientIds;
+    const ingredientsToUse = selectedIds.filter((ingredientId) => pantryById.has(ingredientId));
+
+    if (ingredientsToUse.length === 0) {
+      setPlanningWarning({
+        title: 'Ingredients needed',
+        message: 'Please select ingredients before finding dishes, or add ingredients to your pantry.',
+        canContinue: false,
+      });
+      return;
+    }
+
     const conflictingAllergies = getConflictingAllergies(selectedIds, preferences.allergies);
 
     if (profileError) {
@@ -168,6 +195,39 @@ export default function PlanScreen() {
     }
 
     openResults();
+  };
+
+  const openQuickGuide = () => {
+    setTourStep(0);
+    scrollViewRef.current?.scrollTo({
+      y: Math.max(0, ingredientSectionY - 16),
+      animated: true,
+    });
+    setTimeout(() => ingredientSearchRef.current?.focus(), 350);
+  };
+
+  const moveTourToStep = (step: number) => {
+    setTourStep(step);
+    const targetY = step === 0
+      ? ingredientSectionY
+      : step === 1
+        ? peopleSectionY
+        : findDishesY;
+    scrollViewRef.current?.scrollTo({ y: Math.max(0, targetY - 16), animated: true });
+  };
+
+  const previousTourStep = () => {
+    if (tourStep === null || tourStep === 0) return;
+    moveTourToStep(tourStep - 1);
+  };
+
+  const nextTourStep = () => {
+    if (tourStep === null) return;
+    if (tourStep === 2) {
+      setTourStep(null);
+      return;
+    }
+    moveTourToStep(tourStep + 1);
   };
 
   const addSearchIngredientToStock = async () => {
@@ -200,18 +260,32 @@ export default function PlanScreen() {
 
   return (
     <>
-    <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+    <ScrollView
+      ref={scrollViewRef}
+      contentContainerStyle={styles.content}
+      keyboardShouldPersistTaps="handled"
+    >
       <View style={styles.hero}>
         <View style={styles.heroTopRow}>
           <Text style={styles.eyebrow}>YOUR PANTRY, YOUR PLAN</Text>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Go to login"
-            onPress={goToLogin}
-            style={styles.loginButton}
-          >
-            <Text style={styles.loginButtonText}>Login</Text>
-          </Pressable>
+          <View style={styles.headerActions}>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Open quick guide"
+              onPress={openQuickGuide}
+              style={styles.quickGuideButton}
+            >
+              <Text style={styles.quickGuideButtonText}>Quick guide</Text>
+            </Pressable>
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Go to login"
+              onPress={goToLogin}
+              style={styles.loginButton}
+            >
+              <Text style={styles.loginButtonText}>Login</Text>
+            </Pressable>
+          </View>
         </View>
         <Text style={styles.title}>What shall we cook?</Text>
         <Text style={styles.subtitle}>
@@ -221,18 +295,24 @@ export default function PlanScreen() {
       </View>
       <LanguagePicker />
 
-      <Text style={styles.section}>1. Choose a meal</Text>
-      <View style={styles.row}>
-        {MEALS.map((meal) => (
-          <Chip
-            key={meal.id}
-            label={meal.label}
-            selected={meals.includes(meal.id)}
-            onPress={() => toggleMeal(meal.id)}
-          />
-        ))}
+      <View>
+        <Text style={styles.section}>1. Choose a meal</Text>
+        <View style={styles.row}>
+          {MEALS.map((meal) => (
+            <Chip
+              key={meal.id}
+              label={meal.label}
+              selected={meals.includes(meal.id)}
+              onPress={() => toggleMeal(meal.id)}
+            />
+          ))}
+        </View>
       </View>
 
+      <View
+        onLayout={(event) => setIngredientSectionY(event.nativeEvent.layout.y)}
+        style={tourStep === 0 ? styles.tourHighlight : undefined}
+      >
       <Text style={styles.section}>2. What ingredients do you have?</Text>
       {pantryLoading ? (
         <Text style={styles.noSearchResults}>Loading your pantry…</Text>
@@ -258,6 +338,7 @@ export default function PlanScreen() {
       <View style={styles.searchBox}>
         <Text style={styles.searchIcon}>⌕</Text>
         <TextInput
+          ref={ingredientSearchRef}
           accessibilityLabel="Search ingredients"
           placeholder="Search ingredients"
           placeholderTextColor="#7A6B5E"
@@ -344,10 +425,9 @@ export default function PlanScreen() {
                   <Chip
                     key={ingredient.id}
                     label={stock
-                      ? `${getIngredientName(ingredient.id, language)} · ${formatPantryQuantity(
+                      ? `${getIngredientName(ingredient.id, language)} - ${formatPantryAmount(
                         stock.quantity,
                         stock.unit,
-                        ingredient.id,
                       )}`
                       : `${getIngredientName(ingredient.id, language)} · add to pantry`}
                     selected={Boolean(stock) && (
@@ -379,6 +459,12 @@ export default function PlanScreen() {
             : 'No pantry ingredients found. Try another name.'}
         </Text>
       ) : null}
+      </View>
+
+      <View
+        onLayout={(event) => setPeopleSectionY(event.nativeEvent.layout.y)}
+        style={tourStep === 1 ? styles.tourHighlight : undefined}
+      >
       <Text style={styles.section}>3. How many people?</Text>
       <View style={styles.peopleRow}>
         <Pressable
@@ -404,17 +490,23 @@ export default function PlanScreen() {
         </Pressable>
         <Text style={styles.peopleLabel}>{people === 1 ? 'person' : 'people'}</Text>
       </View>
+      </View>
 
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Find dishes"
-        disabled={meals.length === 0 || pantryLoading || profileLoading || Boolean(pantryError)}
-        style={[styles.button, (meals.length === 0 || pantryLoading || profileLoading || Boolean(pantryError)) && styles.buttonDisabled]}
-        onPress={findDishes}
+      <View
+        onLayout={(event) => setFindDishesY(event.nativeEvent.layout.y)}
+        style={tourStep === 2 ? styles.tourHighlight : undefined}
       >
-        <Text style={styles.buttonText}>Find dishes</Text>
-        <Text style={styles.buttonArrow}>→</Text>
-      </Pressable>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Find dishes"
+          disabled={meals.length === 0 || pantryLoading || profileLoading || Boolean(pantryError)}
+          style={[styles.button, (meals.length === 0 || pantryLoading || profileLoading || Boolean(pantryError)) && styles.buttonDisabled]}
+          onPress={findDishes}
+        >
+          <Text style={styles.buttonText}>Find dishes</Text>
+          <Text style={styles.buttonArrow}>→</Text>
+        </Pressable>
+      </View>
       <Text style={styles.note}>No AI-generated recipes. Just pantry matches and clear steps.</Text>
     </ScrollView>
     <Modal
@@ -454,6 +546,55 @@ export default function PlanScreen() {
         </View>
       </View>
     </Modal>
+    {tourStep !== null ? (
+      <View style={styles.tourTip}>
+        <View style={styles.tourTipHeading}>
+          <Text style={styles.tourTipStep}>STEP {tourStep + 1} OF 3</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Close quick tour"
+            onPress={() => setTourStep(null)}
+            hitSlop={8}
+          >
+            <Text style={styles.tourTipClose}>×</Text>
+          </Pressable>
+        </View>
+        <Text style={styles.tourTipTitle}>
+          {tourStep === 0
+            ? 'Type your ingredients'
+            : tourStep === 1
+              ? 'Set the number of people'
+              : 'Find your dishes'}
+        </Text>
+        <Text style={styles.tourTipMessage}>
+          {tourStep === 0
+            ? 'Type an ingredient in the search bar, then select it to add it to this plan.'
+            : tourStep === 1
+              ? 'Use the minus and plus buttons to choose how many people you are cooking for.'
+              : 'Tap “Find dishes” to see matching South Indian recipes.'}
+        </Text>
+        <View style={styles.tourTipActions}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ disabled: tourStep === 0 }}
+            disabled={tourStep === 0}
+            onPress={previousTourStep}
+            style={[styles.tourTipPrevButton, tourStep === 0 && styles.tourTipPrevButtonDisabled]}
+          >
+            <Text style={styles.tourTipPrevButtonText}>Prev</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={nextTourStep}
+            style={styles.tourTipNextButton}
+          >
+            <Text style={styles.tourTipNextButtonText}>
+              {tourStep === 2 ? 'Finish' : 'Next'}
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+    ) : null}
     </>
   );
 }
@@ -475,6 +616,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   eyebrow: {
     color: '#C45C26',
@@ -508,6 +654,108 @@ const styles = StyleSheet.create({
     fontSize: 16,
     lineHeight: 24,
     color: '#5C4A3A',
+  },
+  quickGuideButton: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+    backgroundColor: '#C45C26',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  quickGuideButtonText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  tourHighlight: {
+    padding: 8,
+    marginHorizontal: -8,
+    borderWidth: 2,
+    borderColor: '#C45C26',
+    borderRadius: 14,
+  },
+  tourTip: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    bottom: 16,
+    zIndex: 20,
+    maxWidth: 440,
+    alignSelf: 'center',
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E8D5C4',
+    borderRadius: 16,
+    backgroundColor: '#FFF8F0',
+    shadowColor: '#3D2B1F',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  tourTipHeading: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  tourTipStep: {
+    color: '#C45C26',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 1,
+  },
+  tourTipClose: {
+    color: '#7A6B5E',
+    fontSize: 24,
+    lineHeight: 24,
+  },
+  tourTipTitle: {
+    marginTop: 4,
+    color: '#7A2E0E',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  tourTipMessage: {
+    marginTop: 6,
+    color: '#5C4A3A',
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  tourTipActions: {
+    marginTop: 12,
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: 8,
+  },
+  tourTipPrevButton: {
+    minHeight: 40,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: '#EDE2D7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tourTipPrevButtonText: {
+    color: '#3D2B1F',
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  tourTipPrevButtonDisabled: {
+    opacity: 0.45,
+  },
+  tourTipNextButton: {
+    minHeight: 40,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+    backgroundColor: '#2D6A4F',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tourTipNextButtonText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '800',
   },
   section: {
     marginTop: 24,

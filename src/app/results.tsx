@@ -5,6 +5,7 @@ import { INGREDIENT_BY_ID } from '../data/ingredients';
 import { getIngredientName } from '../data/ingredientTranslations';
 import type { AppLanguage } from '../data/ingredientTranslations';
 import { hasWeakMatch, isMealType, findDishes, type MatchedRecipe } from '../lib/matchRecipes';
+import { formatQuantityAmount } from '../lib/formatSteps';
 import { useLanguage } from '../context/LanguageContext';
 import { usePantry } from '../context/PantryContext';
 import { useProfile } from '../context/ProfileContext';
@@ -78,7 +79,7 @@ function RecipeCard({
             {item.missing ? '!' : '•'}
           </Text>
           <Text style={[styles.line, item.missing && styles.missingIngredient]}>
-            {item.label} · {item.missing
+            {item.name} - {formatQuantityAmount(item.quantity, item.unit)} · {item.missing
               ? `need more · have ${item.availableLabel}`
               : item.selected
                 ? `in pantry · ${item.availableLabel}`
@@ -152,6 +153,7 @@ export default function ResultsScreen() {
     people,
     pantry,
     allergies: preferences.allergies,
+    dietType: preferences.dietType,
     language,
   });
   const [plannedRecipeIds] = useState(() => initialDishes.map((dish) => dish.id));
@@ -162,6 +164,7 @@ export default function ResultsScreen() {
     pantry,
     recipeIds: plannedRecipeIds,
     allergies: preferences.allergies,
+    dietType: preferences.dietType,
     language,
   });
   const hasAllergyFilters = getAllergyIngredientIds(preferences.allergies).size > 0;
